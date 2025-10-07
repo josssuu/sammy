@@ -10,8 +10,6 @@ use crate::config::{load_config, Config};
 
 #[derive(Parser)]
 pub struct CheckArgs {
-    #[arg(long, short, help = "[Experimental] Enable concurrent status check")]
-    fast: bool,
     #[arg(long, short, help = "Show current branch", default_value_t = true)]
     show_current: bool,
     #[arg(long, short, help = "Filter repositories")]
@@ -27,11 +25,7 @@ impl Runnable for CheckArgs {
             }
         });
 
-        if self.fast {
-            run_fast(self, &config)
-        } else {
-            run_slow(self, &config)
-        }
+        run_fast(self, &config)
     }
 }
 
@@ -86,32 +80,6 @@ fn run_fast(args: &CheckArgs, config: &Config) {
             .expect("Failed to print branch status");
     }
 }
-
-fn run_slow(args: &CheckArgs, config: &Config) {
-    for repository in collect_repos(&args.filter) {
-        let repository_name = repository.file_name().display().to_string();
-
-        let current_branch = if args.show_current {
-            Some(get_repository_current_branch(&repository.path()))
-        } else {
-            None
-        };
-
-        // todo - add tracing (simple printing gets messy with async)
-        let target_branch = get_target_branch(&config, &repository_name);
-        let branch_status = get_repository_status(&repository.path(), &target_branch);
-        let project_status = ProjectStatus {
-            name: repository_name,
-            status: branch_status,
-            current_branch,
-            target_branch,
-        };
-
-        print_branch_status(project_status)
-            .expect("Failed to print branch status");
-    }
-}
-
 
 fn is_git_project(path: &Path) -> bool {
     if !path.is_dir() {
