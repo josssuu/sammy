@@ -14,6 +14,7 @@ pub struct ProjectConfig {
     pub default_branch: Option<String>,
 }
 
+// todo add documentation/guide
 pub fn load_config() -> Option<Config> {
     let path = BaseDirectories::with_prefix("sammy").find_config_file(Path::new("config.yaml"))?;
 
