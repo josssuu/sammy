@@ -3,6 +3,7 @@ use crate::cli::traits::runnable::Runnable;
 use clap::Parser;
 
 mod cli;
+mod config;
 
 fn main() {
     let args = Args::parse();

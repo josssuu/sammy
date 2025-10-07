@@ -5,5 +5,8 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.42", features = ["derive"] }
+serde_yaml = "0.9.34"
 termcolor = "1.4.1"
 tokio = { version = "1.47.1", features = ["rt", "rt-multi-thread"] }
+serde = { version = "1.0.228", features = ["derive"] }
+xdg = "3.0.0"

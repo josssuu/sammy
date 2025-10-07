@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
+use crate::config::{load_config, Config};
 
 #[derive(Parser)]
 pub struct CheckArgs {
@@ -19,15 +20,37 @@ pub struct CheckArgs {
 
 impl Runnable for CheckArgs {
     fn run(&self) {
+        let config = load_config().unwrap_or_else(|| {
+            println!("Config not loaded, using default values");
+            Config {
+                projects: Default::default(),
+            }
+        });
+
         if self.fast {
-            run_fast(self)
+            run_fast(self, &config)
         } else {
-            run_slow(self)
+            run_slow(self, &config)
         }
     }
 }
 
-fn run_fast(args: &CheckArgs) {
+struct ProjectStatus {
+    name: String,
+    status: BranchStatus,
+    current_branch: Option<String>,
+    target_branch: String,
+}
+
+fn get_target_branch(config: &Config, project_name: &String) -> String {
+    config
+        .projects
+        .get(project_name)
+        .and_then(|c| c.default_branch.clone())
+        .unwrap_or("develop".to_string())
+}
+
+fn run_fast(args: &CheckArgs, config: &Config) {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let mut handles = vec![];
 
@@ -39,10 +62,17 @@ fn run_fast(args: &CheckArgs) {
             None
         };
 
+        let target_branch = get_target_branch(&config, &repository_name);
+
         // todo - add tracing (simple printing gets messy with async)
         let handle = runtime.spawn( async move {
-            let status = get_repository_status(&repository.path(), "develop");
-            (repository_name, status, current_branch_display)
+            let branch_status = get_repository_status(&repository.path(), &target_branch);
+            ProjectStatus {
+                name: repository_name,
+                status: branch_status,
+                current_branch: current_branch_display,
+                target_branch,
+            }
         });
 
         handles.push(handle);
@@ -50,14 +80,14 @@ fn run_fast(args: &CheckArgs) {
 
 
     for handle in handles {
-        let (repository, status, current_branch) = runtime.block_on(handle).unwrap();
+        let project_status = runtime.block_on(handle).unwrap();
 
-        print_branch_status(&repository, &status, current_branch)
+        print_branch_status(project_status)
             .expect("Failed to print branch status");
     }
 }
 
-fn run_slow(args: &CheckArgs) {
+fn run_slow(args: &CheckArgs, config: &Config) {
     for repository in collect_repos(&args.filter) {
         let repository_name = repository.file_name().display().to_string();
 
@@ -68,9 +98,16 @@ fn run_slow(args: &CheckArgs) {
         };
 
         // todo - add tracing (simple printing gets messy with async)
-        let status = get_repository_status(&repository.path(), "develop");
+        let target_branch = get_target_branch(&config, &repository_name);
+        let branch_status = get_repository_status(&repository.path(), &target_branch);
+        let project_status = ProjectStatus {
+            name: repository_name,
+            status: branch_status,
+            current_branch,
+            target_branch,
+        };
 
-        print_branch_status(&repository_name, &status, current_branch)
+        print_branch_status(project_status)
             .expect("Failed to print branch status");
     }
 }
@@ -170,22 +207,22 @@ enum BranchStatus {
     LocalNotFound,
 }
 
-fn print_branch_status(repository: &str, status: &BranchStatus, current_branch: Option<String>) -> io::Result<()> {
-    let (status_message, color) = match status {
-        BranchStatus::UpToDate => ("up to date", Color::Green),
-        BranchStatus::UpdateAvailable => ("update available", Color::Yellow),
-        BranchStatus::LocalAhead => ("local is ahead", Color::Magenta),
-        BranchStatus::RemoteNotFound => ("remote 'develop' branch not found", Color::Red),
-        BranchStatus::LocalNotFound => ("local 'develop' branch not found", Color::Red),
+fn print_branch_status(project_status: ProjectStatus) -> io::Result<()> {
+    let (status_message, color) = match project_status.status {
+        BranchStatus::UpToDate => ("up to date".to_string(), Color::Green),
+        BranchStatus::UpdateAvailable => ("update available".to_string(), Color::Yellow),
+        BranchStatus::LocalAhead => ("local is ahead".to_string(), Color::Magenta),
+        BranchStatus::RemoteNotFound => (format!("remote '{}' branch not found", project_status.target_branch), Color::Red),
+        BranchStatus::LocalNotFound => (format!("local '{}' branch not found", project_status.target_branch), Color::Red),
     };
 
     let buffer_writer = BufferWriter::stdout(ColorChoice::Always);
     let mut buffer = buffer_writer.buffer();
 
     buffer.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
-    write!(&mut buffer, "{:<35}", repository)?;
+    write!(&mut buffer, "{:<35}", project_status.name)?;
 
-    if let Some(branch) = current_branch {
+    if let Some(branch) = project_status.current_branch {
         write!(&mut buffer, "{:<10}", branch)?;
     }
 
