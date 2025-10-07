@@ -10,8 +10,6 @@ use crate::config::{load_config, Config};
 
 #[derive(Parser)]
 pub struct CheckArgs {
-    #[arg(long, short, help = "Show current branch", default_value_t = true)]
-    show_current: bool,
     #[arg(long, short, help = "Filter repositories")]
     filter: Option<String>,
 }
@@ -32,7 +30,7 @@ impl Runnable for CheckArgs {
 struct ProjectStatus {
     name: String,
     status: BranchStatus,
-    current_branch: Option<String>,
+    current_branch: String,
     target_branch: String,
 }
 
@@ -50,12 +48,7 @@ fn run_fast(args: &CheckArgs, config: &Config) {
 
     for repository in collect_repos(&args.filter) {
         let repository_name = repository.file_name().display().to_string();
-        let current_branch_display = if args.show_current {
-            Some(get_repository_current_branch(&repository.path()))
-        } else {
-            None
-        };
-
+        let current_branch = get_repository_current_branch(&repository.path());
         let target_branch = get_target_branch(&config, &repository_name);
 
         // todo - add tracing (simple printing gets messy with async)
@@ -64,7 +57,7 @@ fn run_fast(args: &CheckArgs, config: &Config) {
             ProjectStatus {
                 name: repository_name,
                 status: branch_status,
-                current_branch: current_branch_display,
+                current_branch,
                 target_branch,
             }
         });
@@ -189,11 +182,7 @@ fn print_branch_status(project_status: ProjectStatus) -> io::Result<()> {
 
     buffer.set_color(ColorSpec::new().set_fg(Some(Color::White)))?;
     write!(&mut buffer, "{:<35}", project_status.name)?;
-
-    if let Some(branch) = project_status.current_branch {
-        write!(&mut buffer, "{:<10}", branch)?;
-    }
-
+    write!(&mut buffer, "{:<10}", project_status.current_branch)?;
     write!(&mut buffer, "| ")?;
 
     buffer.set_color(ColorSpec::new().set_fg(Some(color)))?;
