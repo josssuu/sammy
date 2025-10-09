@@ -5,7 +5,6 @@ use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 use crate::cli::command::Reportable;
 use crate::config::{load_config, Config};
 use crate::utils;
-use crate::utils::repository::Repository;
 
 #[derive(Parser)]
 pub struct UpdateArgs {
@@ -41,10 +40,7 @@ impl Runnable for UpdateArgs {
             }
         });
 
-        let repos = utils::collect_repos(&self.filter)
-            .iter()
-            .map(|dir| Repository::new(dir.path()))
-            .collect::<Vec<_>>();
+        let repos = utils::collect_repos(&self.filter);
 
         if repos.is_empty() {
             println!("No repositories found");
