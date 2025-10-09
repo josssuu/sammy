@@ -1,13 +1,11 @@
-use crate::cli::check::CheckArgs;
-use crate::cli::traits::runnable::Runnable;
-use crate::cli::update::UpdateArgs;
-use crate::cli::woof::WoofArgs;
-use clap::Parser;
+use traits::runnable::Runnable;
+use clap::{command, Parser};
+use command::check::CheckArgs;
+use crate::cli::command::update::UpdateArgs;
+use crate::cli::command::woof::WoofArgs;
 
-mod check;
 pub mod traits;
-mod update;
-mod woof;
+mod command;
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -21,7 +19,7 @@ enum MainCommand {
     #[command(about = "Check repositories' states")]
     Check(CheckArgs),
 
-    #[command(about = "Update repositories")]
+    #[command(about = "Update repositories. Does not allow updating if changes are present.\n  1. Fetch\n  2. Checkout\n  3. Pull")]
     Update(UpdateArgs),
 
     #[command(about = "Talk to Sammy")]

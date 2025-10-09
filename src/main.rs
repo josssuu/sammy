@@ -4,6 +4,7 @@ use clap::Parser;
 
 mod cli;
 mod config;
+mod utils;
 
 fn main() {
     let args = Args::parse();

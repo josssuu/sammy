@@ -1,12 +1,12 @@
 use crate::cli::traits::runnable::Runnable;
 use clap::Parser;
 use std::env::current_dir;
-use std::fs::{read_dir, DirEntry};
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 use crate::config::{load_config, Config};
+use crate::utils;
 
 #[derive(Parser)]
 pub struct CheckArgs {
@@ -34,22 +34,14 @@ struct ProjectStatus {
     target_branch: String,
 }
 
-fn get_target_branch(config: &Config, project_name: &String) -> String {
-    config
-        .projects
-        .get(project_name)
-        .and_then(|c| c.default_branch.clone())
-        .unwrap_or("develop".to_string())
-}
-
 fn run_fast(args: &CheckArgs, config: &Config) {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let mut handles = vec![];
 
-    for repository in collect_repos(&args.filter) {
+    for repository in utils::collect_repos(&args.filter) {
         let repository_name = repository.file_name().display().to_string();
         let current_branch = get_repository_current_branch(&repository.path());
-        let target_branch = get_target_branch(&config, &repository_name);
+        let target_branch = config.get_target_branch(&repository_name);
 
         // todo - add tracing (simple printing gets messy with async)
         let handle = runtime.spawn( async move {
@@ -72,20 +64,6 @@ fn run_fast(args: &CheckArgs, config: &Config) {
         print_branch_status(project_status)
             .expect("Failed to print branch status");
     }
-}
-
-fn is_git_project(path: &Path) -> bool {
-    if !path.is_dir() {
-        return false
-    }
-
-    read_dir(path)
-        .expect("Failed to read directory")
-        .any(|entry| {
-            let entry = entry.expect("No such entry");
-            let git = Path::new(".git");
-            entry.file_name().eq(git)
-        })
 }
 
 fn get_remote_head(repository: &Path, branch: &str) -> Option<String> {
@@ -200,21 +178,4 @@ fn get_repository_current_branch(repository: &Path) -> String {
 
     let stdout = String::from_utf8(output.stdout).expect("Failed to parse stdout").trim().to_string();
     stdout
-}
-
-fn collect_repos(filter: &Option<String>) -> Vec<DirEntry> {
-    read_dir(Path::new("./"))
-        .expect("Failed to read directory")
-        .map(|entry| entry.expect("Failed to read entry"))
-        .filter(|entry| {
-            if let Some(filter) = filter {
-                let repository_name = entry.file_name().display().to_string();
-                if !repository_name.contains(filter) {
-                    return false
-                }
-            }
-
-            is_git_project(&entry.path())
-        })
-        .collect()
 }
