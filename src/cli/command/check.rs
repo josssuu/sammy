@@ -1,11 +1,11 @@
+use crate::cli::command::Reportable;
 use crate::cli::traits::runnable::Runnable;
+use crate::config::{Config, load_config};
+use crate::utils;
+use crate::utils::repository::Repository;
 use clap::Parser;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
-use crate::cli::command::Reportable;
-use crate::config::{load_config, Config};
-use crate::utils;
-use crate::utils::repository::Repository;
 
 #[derive(Parser)]
 pub struct CheckArgs {
@@ -40,7 +40,7 @@ impl Runnable for CheckArgs {
             let target_branch = config.get_target_branch(&repository_name);
 
             // todo - add tracing (simple printing gets messy with async)
-            let handle = runtime.spawn( async move {
+            let handle = runtime.spawn(async move {
                 let branch_status = get_repository_status(&repository, &target_branch);
                 ProjectStatus {
                     name: repository_name,
@@ -53,11 +53,11 @@ impl Runnable for CheckArgs {
             handles.push(handle);
         }
 
-
         for handle in handles {
             let project_status = runtime.block_on(handle).unwrap();
 
-            project_status.display()
+            project_status
+                .display()
                 .expect("Failed to print branch status");
         }
     }
@@ -72,17 +72,19 @@ struct ProjectStatus {
 
 fn get_repository_status(repo: &Repository, branch: &str) -> BranchStatus {
     let Some(remote_head) = repo.get_remote_head(branch) else {
-        return BranchStatus::RemoteNotFound
+        return BranchStatus::RemoteNotFound;
     };
 
     let Some(local_head) = repo.get_local_head(branch) else {
-        return BranchStatus::LocalNotFound
+        return BranchStatus::LocalNotFound;
     };
 
     if local_head == remote_head {
         BranchStatus::UpToDate
-    }
-    else if repo.is_local_ahead(branch).expect("Unable to check local branch status") {
+    } else if repo
+        .is_local_ahead(branch)
+        .expect("Unable to check local branch status")
+    {
         BranchStatus::LocalAhead
     } else {
         BranchStatus::UpdateAvailable
@@ -103,8 +105,14 @@ impl Reportable for ProjectStatus {
             BranchStatus::UpToDate => ("up to date".to_string(), Color::Green),
             BranchStatus::UpdateAvailable => ("update available".to_string(), Color::Yellow),
             BranchStatus::LocalAhead => ("local is ahead".to_string(), Color::Magenta),
-            BranchStatus::RemoteNotFound => (format!("remote '{}' branch not found", self.target_branch), Color::Red),
-            BranchStatus::LocalNotFound => (format!("local '{}' branch not found", self.target_branch), Color::Red),
+            BranchStatus::RemoteNotFound => (
+                format!("remote '{}' branch not found", self.target_branch),
+                Color::Red,
+            ),
+            BranchStatus::LocalNotFound => (
+                format!("local '{}' branch not found", self.target_branch),
+                Color::Red,
+            ),
         };
 
         let buffer_writer = BufferWriter::stdout(ColorChoice::Always);
@@ -121,4 +129,3 @@ impl Reportable for ProjectStatus {
         buffer_writer.print(&buffer)
     }
 }
-

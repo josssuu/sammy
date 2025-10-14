@@ -13,8 +13,7 @@ impl Repository {
     }
 
     pub fn name(&self) -> String {
-        self
-            .path
+        self.path
             .file_name()
             .expect("Path does not have a file name")
             .to_str()
@@ -24,7 +23,7 @@ impl Repository {
 
     pub fn is_git_project(&self) -> bool {
         if !self.path.is_dir() {
-            return false
+            return false;
         }
 
         read_dir(self.path.clone())
@@ -43,7 +42,10 @@ impl Repository {
             .output()
             .expect("Failed to execute git command");
 
-        let stdout = String::from_utf8(output.stdout).expect("Failed to parse stdout").trim().to_string();
+        let stdout = String::from_utf8(output.stdout)
+            .expect("Failed to parse stdout")
+            .trim()
+            .to_string();
         stdout
     }
 
@@ -97,8 +99,12 @@ impl Repository {
             .expect("Failed to execute git command");
 
         if output.status.success() {
-            let stdout = String::from_utf8(output.stdout).expect("Failed to parse stdout").trim().to_string();
-            let hash = stdout.split_once('\t')
+            let stdout = String::from_utf8(output.stdout)
+                .expect("Failed to parse stdout")
+                .trim()
+                .to_string();
+            let hash = stdout
+                .split_once('\t')
                 .map(|(h, _)| h.trim())
                 .filter(|h| !h.is_empty())
                 .map(|h| h.to_string());
@@ -117,7 +123,10 @@ impl Repository {
             .expect("Failed to execute git command");
 
         if output.status.success() {
-            let stdout = String::from_utf8(output.stdout).expect("Failed to parse stdout").trim().to_string();
+            let stdout = String::from_utf8(output.stdout)
+                .expect("Failed to parse stdout")
+                .trim()
+                .to_string();
             Some(stdout)
         } else {
             None
@@ -126,13 +135,21 @@ impl Repository {
 
     pub fn is_local_ahead(&self, branch: &str) -> Option<bool> {
         let output = Command::new("git")
-            .args(["rev-list", "--count", "--left-only", format!("{}...origin/{}", branch, branch).as_str()])
+            .args([
+                "rev-list",
+                "--count",
+                "--left-only",
+                format!("{}...origin/{}", branch, branch).as_str(),
+            ])
             .current_dir(self.path.clone())
             .output()
             .expect("Failed to execute git command");
 
         if output.status.success() {
-            let stdout = String::from_utf8(output.stdout).expect("Failed to parse stdout").trim().to_string();
+            let stdout = String::from_utf8(output.stdout)
+                .expect("Failed to parse stdout")
+                .trim()
+                .to_string();
             let diff_count = stdout.parse::<usize>().expect("Failed to parse stdout");
             Some(diff_count > 0)
         } else {
@@ -148,7 +165,10 @@ impl Repository {
             .expect("Failed to execute git command");
 
         if output.status.success() {
-            let stdout = String::from_utf8(output.stdout).expect("Failed to parse stdout").trim().to_string();
+            let stdout = String::from_utf8(output.stdout)
+                .expect("Failed to parse stdout")
+                .trim()
+                .to_string();
             Some(!stdout.is_empty())
         } else {
             None
