@@ -10,6 +10,8 @@ use crate::utils;
 pub struct UpdateArgs {
     #[arg(long, short, help = "Filter branches to update")]
     filter: Option<String>,
+    #[arg(long, short, help = "Filter by group")]
+    group: Option<String>,
     #[arg(long, short, help = "Stays on current branch after update (pun intended)")]
     stay: bool,
     #[arg(long, short, help = "Override branch to update")]
@@ -40,7 +42,7 @@ impl Runnable for UpdateArgs {
             }
         });
 
-        let repos = utils::collect_repos(&self.filter);
+        let repos = utils::collect_repos(&config, &self.filter, &self.group);
 
         if repos.is_empty() {
             println!("No repositories found");

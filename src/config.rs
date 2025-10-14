@@ -12,6 +12,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProjectConfig {
     pub default_branch: Option<String>,
+    pub group: Option<String>,
 }
 
 // todo add documentation/guide

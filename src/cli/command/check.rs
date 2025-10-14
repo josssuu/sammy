@@ -11,6 +11,8 @@ use crate::utils::repository::Repository;
 pub struct CheckArgs {
     #[arg(long, short, help = "Filter repositories")]
     filter: Option<String>,
+    #[arg(long, short, help = "Filter by group")]
+    group: Option<String>,
 }
 
 impl Runnable for CheckArgs {
@@ -25,7 +27,7 @@ impl Runnable for CheckArgs {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let mut handles = vec![];
 
-        let repos = utils::collect_repos(&self.filter);
+        let repos = utils::collect_repos(&config, &self.filter, &self.group);
 
         if repos.is_empty() {
             println!("No repositories found");
