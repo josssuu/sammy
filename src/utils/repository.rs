@@ -42,11 +42,10 @@ impl Repository {
             .output()
             .expect("Failed to execute git command");
 
-        let stdout = String::from_utf8(output.stdout)
+        String::from_utf8(output.stdout)
             .expect("Failed to parse stdout")
             .trim()
-            .to_string();
-        stdout
+            .to_string()
     }
 
     pub fn fetch(&self) -> Result<(), ()> {
@@ -63,7 +62,7 @@ impl Repository {
         }
     }
 
-    pub fn checkout(&self, branch: &String) -> Result<(), ()> {
+    pub fn checkout(&self, branch: &str) -> Result<(), ()> {
         let output = Command::new("git")
             .args(["checkout", branch])
             .current_dir(self.path.clone())
@@ -103,13 +102,13 @@ impl Repository {
                 .expect("Failed to parse stdout")
                 .trim()
                 .to_string();
-            let hash = stdout
+
+            // Hash
+            stdout
                 .split_once('\t')
                 .map(|(h, _)| h.trim())
                 .filter(|h| !h.is_empty())
-                .map(|h| h.to_string());
-
-            hash
+                .map(|h| h.to_string())
         } else {
             None
         }
@@ -139,7 +138,7 @@ impl Repository {
                 "rev-list",
                 "--count",
                 "--left-only",
-                format!("{}...origin/{}", branch, branch).as_str(),
+                format!("{branch}...origin/{branch}").as_str(),
             ])
             .current_dir(self.path.clone())
             .output()

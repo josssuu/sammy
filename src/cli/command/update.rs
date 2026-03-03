@@ -3,6 +3,7 @@ use crate::cli::traits::runnable::Runnable;
 use crate::config::{Config, load_config};
 use crate::utils;
 use clap::Parser;
+use log::debug;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
@@ -39,7 +40,7 @@ enum UpdateStatus {
 impl Runnable for UpdateArgs {
     fn run(&self) {
         let config = load_config().unwrap_or_else(|| {
-            println!("Config not loaded, using default values");
+            debug!("Config not loaded, using default values");
             Config {
                 projects: Default::default(),
             }
@@ -115,10 +116,12 @@ impl Runnable for UpdateArgs {
         for handle in handles {
             let project_status = runtime.block_on(handle).unwrap();
 
-            project_status.display().expect(&format!(
-                "Failed to print update result for {}",
-                project_status.repository_name
-            ));
+            project_status.display().unwrap_or_else(|e| {
+                panic!(
+                    "Failed to print update result for {}: {e:?}",
+                    project_status.repository_name
+                )
+            });
         }
     }
 }
@@ -181,7 +184,7 @@ impl Reportable for UpdateResult {
         write!(&mut buffer, "| ")?;
 
         buffer.set_color(ColorSpec::new().set_fg(Some(color)))?;
-        write!(&mut buffer, "{}\n", status_message)?;
+        writeln!(&mut buffer, "{status_message}")?;
 
         buffer_writer.print(&buffer)
     }

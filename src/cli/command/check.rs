@@ -4,6 +4,7 @@ use crate::config::{Config, load_config};
 use crate::utils;
 use crate::utils::repository::Repository;
 use clap::Parser;
+use log::debug;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
@@ -18,7 +19,7 @@ pub struct CheckArgs {
 impl Runnable for CheckArgs {
     fn run(&self) {
         let config = load_config().unwrap_or_else(|| {
-            println!("Config not loaded, using default values");
+            debug!("Config not loaded, using default values");
             Config {
                 projects: Default::default(),
             }
@@ -124,7 +125,7 @@ impl Reportable for ProjectStatus {
         write!(&mut buffer, "| ")?;
 
         buffer.set_color(ColorSpec::new().set_fg(Some(color)))?;
-        write!(&mut buffer, "{}\n", status_message)?;
+        writeln!(&mut buffer, "{status_message}")?;
 
         buffer_writer.print(&buffer)
     }
