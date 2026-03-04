@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use xdg::BaseDirectories;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Config {
     pub projects: HashMap<String, ProjectConfig>,
 }
@@ -15,24 +15,21 @@ pub struct ProjectConfig {
     pub group: Option<String>,
 }
 
-pub(crate) fn get_config_path() -> Option<PathBuf> {
-    BaseDirectories::with_prefix("sammy").find_config_file(Path::new("config.yaml"))
+pub(crate) fn get_config_path() -> PathBuf {
+    BaseDirectories::with_prefix("sammy")
+        .place_config_file(Path::new("config.yaml"))
+        .unwrap_or_else(|e| panic!("Failed to load config: {e}"))
 }
 
 // todo add documentation/guide
 pub fn load_config() -> Option<Config> {
-    let path = get_config_path()?;
-
-    if path.exists() {
-        let content = fs::read_to_string(path).ok()?;
-        serde_yaml::from_str(&content).ok()
-    } else {
-        None
-    }
+    let path = get_config_path();
+    let content = fs::read_to_string(path).ok()?;
+    serde_yaml::from_str(&content).ok()?
 }
 
 pub fn save_config(config: &Config) {
-    let path = get_config_path().expect("unable to get config path");
+    let path = get_config_path();
     let content = serde_yaml::to_string(config).expect("Unable to serialize config");
 
     fs::write(path, content).expect("Unable to write config file");
