@@ -1,6 +1,7 @@
 use std::io;
 
 pub mod check;
+pub(crate) mod config;
 pub mod update;
 pub mod woof;
 

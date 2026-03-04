@@ -1,6 +1,7 @@
+use crate::cli::command::config::ConfigCommand;
 use crate::cli::command::update::UpdateArgs;
 use crate::cli::command::woof::WoofArgs;
-use clap::{Parser, command};
+use clap::{Parser, Subcommand, command};
 use command::check::CheckArgs;
 use traits::runnable::Runnable;
 
@@ -14,7 +15,7 @@ pub struct Args {
     cmd: MainCommand,
 }
 
-#[derive(Parser)]
+#[derive(Subcommand)]
 enum MainCommand {
     #[command(about = "Check repositories' states")]
     Check(CheckArgs),
@@ -23,6 +24,9 @@ enum MainCommand {
         about = "Update repositories. Does not allow updating if changes are present.\n  1. Fetch\n  2. Checkout\n  3. Pull"
     )]
     Update(UpdateArgs),
+
+    #[command(subcommand, about = "Configuration management")]
+    Config(ConfigCommand),
 
     #[command(about = "Talk to Sammy")]
     Woof(WoofArgs),
@@ -33,6 +37,7 @@ impl Runnable for Args {
         match &self.cmd {
             MainCommand::Check(args) => args.run(),
             MainCommand::Update(args) => args.run(),
+            MainCommand::Config(cmd) => cmd.run(),
             MainCommand::Woof(args) => args.run(),
         }
     }
